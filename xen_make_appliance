@@ -10,7 +10,8 @@
 # May be freely redistributed
 #
 
-DEBUG=true
+DEBUG=false
+
 
 if [[ ${DEBUG} != true ]] ; then
   if [[ `whoami` != 'root' ]] ; then
@@ -63,10 +64,12 @@ fi
   
 logicalVolumeGroupName=${LOGICAL_VOLUME_GROUP_NAME:-vm_lvs}
 logicalVolumePrefix=${LOGICAL_VOLUME_PREFIX:-lvol_}  
-logcialVolumeStripes=${LOGICAL_VOLUME_TOTAL_STRIPES:-5}
+logicalVolumeStripes=${LOGICAL_VOLUME_TOTAL_STRIPES:-5}
 baseVMMountPoint=${BASE_VM_MOUNT_POINT:-xenvms}
 backupFileExtension=${BACKUP_FILE_EXTENSION:-bak}
 
+dropboxBaseUrl=${DROPBOX_BASE_URL}
+dropboxWriteDir=${DROPBOX_WRITE_DIR}
 
 ########
 # VM Setup starts
@@ -74,29 +77,39 @@ backupFileExtension=${BACKUP_FILE_EXTENSION:-bak}
   
 # Create the logical volume to hold the VM
 
-#sudo lvcreate -i${logcialVolumeStripes} -L${diskSizeGB}G -n${logicalVolumePrefix}${applianceNameLowerCase} ${logicalVolumeGroupName}
-#sudo mkfs -t ext3 /dev/${logicalVolumeGroupName}/${logicalVolumePrefix}${applianceNameLowerCase}
-#sudo mkdir -p ${baseVMMountPoint}/${applianceName}
-#sudo mount /dev/${logicalVolumeGroupName}/${logicalVolumePrefix}${applianceNameLowerCase}  ${baseVMMountPoint}/${applianceName}
+logicalVolumeExists=`sudo /usr/sbin/lvscan | grep -c ${logicalVolumePrefix}${applianceNameLowerCase}`
+if [[ X${logicalVolumeExists} == X0 ]] ; then
+  sudo /usr/sbin/lvcreate -i${logicalVolumeStripes} -L${diskSizeGB}G -n${logicalVolumePrefix}${applianceNameLowerCase} ${logicalVolumeGroupName}
+  sudo /sbin/mkfs -t ext3 /dev/${logicalVolumeGroupName}/${logicalVolumePrefix}${applianceNameLowerCase}
+  sudo mkdir -p ${baseVMMountPoint}/${applianceName}
+  sudo mount /dev/${logicalVolumeGroupName}/${logicalVolumePrefix}${applianceNameLowerCase}  ${baseVMMountPoint}/${applianceName}
 
-echo "sudo lvcreate -i${logcialVolumeStripes} -L${diskSizeGB}G -n${logicalVolumePrefix}${applianceNameLowerCase} ${logicalVolumeGroupName}"
-echo "sudo mkfs -t ext3 /dev/${logicalVolumeGroupName}/${logicalVolumePrefix}${applianceNameLowerCase}"
-echo "sudo mkdir -p ${baseVMMountPoint}/${applianceName}"
-echo "sudo mount /dev/${logicalVolumeGroupName}/${logicalVolumePrefix}${applianceNameLowerCase}  ${baseVMMountPoint}/${applianceName}"
+  # Save off VM mount cmd
+  touch ${vmMountCmds}
+  cp ${vmMountCmds} ${vmMountCmds}.${backupFileExtension}
+  echo "sudo mount /dev/${logicalVolumeGroupName}/${logicalVolumePrefix}${applianceNameLowerCase}  ${baseVMMountPoint}/${applianceName}" >> ${vmMountCmds}.${backupFileExtension}
+  uniq < ${vmMountCmds}.${backupFileExtension} >${vmMountCmds}
+  chmod a+x ${vmMountCmds}
 
-# Save off VM mount cmd
-touch ${vmMountCmds}
-cp ${vmMountCmds} ${vmMountCmds}.${backupFileExtension}
-echo "sudo mount /dev/${logicalVolumeGroupName}/${logicalVolumePrefix}${applianceNameLowerCase}  ${baseVMMountPoint}/${applianceName}" >> ${vmMountCmds}.${backupFileExtension}
-uniq < ${vmMountCmds}.${backupFileExtension} >${vmMountCmds}
-chmod a+x ${vmMountCmds}
+else
+  echo "Logical volume ${logicalVolumePrefix}${applianceNameLowerCase} already exists. Skipping creation ..."
+fi
+
+
+
+
 
 # Create the VM itself
-#cd ${baseVMMountPoint}/${applianceName}
-#dd if=/dev/zero of=appliance-base.img oflag=direct bs=1M seek=${diskSizeMB} count=1
-#wget http://dl.dropbox.com/u/12189743/xen/${applianceName}/appliance-base.install.cfg
-#wget http://dl.dropbox.com/u/12189743/xen/${applianceName}/appliance-base.cfg
+if [[ ! -e ${baseVMMountPoint}/${applianceName}/appliance-base.img ]] ; then
+  cd ${baseVMMountPoint}/${applianceName}
+  dd if=/dev/zero of=appliance-base.img oflag=direct bs=1M seek=${diskSizeMB} count=1
+  #wget http://dl.dropbox.com/u/12189743/xen/${applianceName}/appliance-base.install.cfg
+  #wget http://dl.dropbox.com/u/12189743/xen/${applianceName}/appliance-base.cfg
+else
+  echo "Base VM disk image ${baseVMMountPoint}/${applianceName}/appliance-base.img already exists. Skipping VM Disk image creation"
+fi
 
+exit 1
 
 # Edit the config files
 

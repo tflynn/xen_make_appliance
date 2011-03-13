@@ -17,10 +17,10 @@
 	<p>The dropbox account is used to hold generated configuration files so that they are accessible during initialization of a VM. Any other mechanism that provides a read/write store could be equally well used. The read side of the store should be visible at an <span class="caps">HTTP URL</span>.</p>
 
 
-	<p>Install <a href="http://www.dropbox.com/downloading?os=lnx">Dropbox for Linux</a>. Probably connected it to a non-VM instance (this is the only combination tested).</p>
+	<p>Install <a href="http://www.dropbox.com/downloading?os=lnx">Dropbox for Linux</a>. Probably connect it to a non-VM instance (this is the only combination tested).</p>
 
 
-	<p>This script will create a directory tree in ~/Dropbox/Public/xen with VM-specific subdirectories containing configuration files.</p>
+	<p>This script will create a directory tree in ~/Dropbox/Public/xen with VM-specific subdirectories containing configuration files. Change this by changing the contents of the file &#8216;dropbox_base_url&#8217;.</p>
 
 
 	<h2><span class="caps">LVM</span> Setup</h2>
@@ -37,7 +37,6 @@
 
 	<ul>
 	<li>dropbox_base_url &#8211; A file containing a public <span class="caps">URL</span> to a dropbox account</li>
-		<li>xen_create_appliance.config &#8211; A file containt site-specific configuration information for this script. (A sample is provided below.)</li>
 	</ul>
 
 
