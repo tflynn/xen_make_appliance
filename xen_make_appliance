@@ -1,45 +1,102 @@
 #!/bin/bash
 
-if [[ X$1 == X ]] ; then
-  echo "Usage: xen_make_appliance [bin_dir] [appliance name] [memory size in MB] [disk_size in GB]"
+#
+# Script to create Xen-based VMs from scratch on CentOS 5
+#
+# See README for pre-requisites etc.
+# 
+# tflynn projects@olioinfo.net
+#
+# May be freely redistributed
+#
+
+DEBUG=true
+
+if [[ ${DEBUG} != true ]] ; then
+  if [[ `whoami` != 'root' ]] ; then
+    echo "Please run this script as root"
+    exit 1
+  fi
+fi
+
+
+if [[ $# != 5 ]] ; then
+  echo "Usage: xen_make_appliance [binaries directory] [configuration directory] [appliance name] [memory size in MB] [disk_size in GB]"
   exit 1
 fi
 
+###############
+# Set up a whole bunch of variables
+###############
+
 binDir=$1
-applianceName=$2
+configurationDir=$2
+applianceName=$3
 applianceNameLowerCase=`echo ${applianceName} | tr '[:upper:]' '[:lower:]'`
-memorySizeMB=$3
-diskSizeGB=$4
+memorySizeMB=$4
+diskSizeGB=$5
 diskSizeMB=$(((diskSizeGB * 1000) - 100))
-vmMacAddresses="${binDir}/vm_mac_addresses"
 
-source ${binDir}/dropbox_base_url
+vmMacAddresses="${configurationDir}/vm_mac_addresses"
+dropboxBaseUrlFile="${configurationDir}/dropbox_base_url"
+vmMountCmds=${configurationDir}/mount_all_vms
+vmStartCmds=${configurationDir}/start_all_vms
 
+# Load configuration files
+
+if [[ ! -e $dropboxBaseUrlFile ]] ; then
+  echo "Please create the file ${dropboxBaseUrlFile} with the URL for the base of the Xen configuration file tree."
+  exit 1
+fi
+
+source $dropboxBaseUrlFile
+
+configFile="${configurationDir}/xen_make_appliance.config"
+
+if [[ -e ${configFile} ]] ; then
+  source ${configFile}
+else
+  echo "No configuration file found. Using defaults."
+fi
+
+# Set variables based on configuration file settings or defaults
+  
+logicalVolumeGroupName=${LOGICAL_VOLUME_GROUP_NAME:-vm_lvs}
+logicalVolumePrefix=${LOGICAL_VOLUME_PREFIX:-lvol_}  
+logcialVolumeStripes=${LOGICAL_VOLUME_TOTAL_STRIPES:-5}
+baseVMMountPoint=${BASE_VM_MOUNT_POINT:-xenvms}
+backupFileExtension=${BACKUP_FILE_EXTENSION:-bak}
+
+
+########
+# VM Setup starts
+########
+  
 # Create the logical volume to hold the VM
 
-#sudo lvcreate -i5 -L${diskSizeGB}G -nlvol_${applianceNameLowerCase} vm_lvs
-#sudo mkfs -t ext3 /dev/vm_lvs/lvol_${applianceNameLowerCase}
-#sudo mkdir -p /xenvms/${applianceName}
-#sudo mount   /dev/vm_lvs/lvol_${applianceNameLowerCase}  /xenvms/${applianceName}
+#sudo lvcreate -i${logcialVolumeStripes} -L${diskSizeGB}G -n${logicalVolumePrefix}${applianceNameLowerCase} ${logicalVolumeGroupName}
+#sudo mkfs -t ext3 /dev/${logicalVolumeGroupName}/${logicalVolumePrefix}${applianceNameLowerCase}
+#sudo mkdir -p ${baseVMMountPoint}/${applianceName}
+#sudo mount /dev/${logicalVolumeGroupName}/${logicalVolumePrefix}${applianceNameLowerCase}  ${baseVMMountPoint}/${applianceName}
 
-echo "sudo lvcreate -i5 -L${diskSizeGB}G -nlvol_${applianceNameLowerCase} vm_lvs"
-echo "sudo mkfs -t ext3 /dev/vm_lvs/lvol_${applianceNameLowerCase}"
-echo "sudo mkdir -p /xenvms/${applianceName}"
-echo "sudo mount   /dev/vm_lvs/lvol_${applianceNameLowerCase}  /xenvms/${applianceName}"
+echo "sudo lvcreate -i${logcialVolumeStripes} -L${diskSizeGB}G -n${logicalVolumePrefix}${applianceNameLowerCase} ${logicalVolumeGroupName}"
+echo "sudo mkfs -t ext3 /dev/${logicalVolumeGroupName}/${logicalVolumePrefix}${applianceNameLowerCase}"
+echo "sudo mkdir -p ${baseVMMountPoint}/${applianceName}"
+echo "sudo mount /dev/${logicalVolumeGroupName}/${logicalVolumePrefix}${applianceNameLowerCase}  ${baseVMMountPoint}/${applianceName}"
 
-# Add to VM mount cmd
-vmMountCmds=${binDir}/mount_all_vms
+# Save off VM mount cmd
 touch ${vmMountCmds}
-cp ${vmMountCmds} ${vmMountCmds}.bak
-echo "sudo mount   /dev/vm_lvs/lvol_${applianceNameLowerCase}  /xenvms/${applianceName}" >> ${vmMountCmds}.bak
-uniq < ${vmMountCmds}.bak >${vmMountCmds}
+cp ${vmMountCmds} ${vmMountCmds}.${backupFileExtension}
+echo "sudo mount /dev/${logicalVolumeGroupName}/${logicalVolumePrefix}${applianceNameLowerCase}  ${baseVMMountPoint}/${applianceName}" >> ${vmMountCmds}.${backupFileExtension}
+uniq < ${vmMountCmds}.${backupFileExtension} >${vmMountCmds}
 chmod a+x ${vmMountCmds}
 
 # Create the VM itself
-#cd /xenvms/${applianceName}
+#cd ${baseVMMountPoint}/${applianceName}
 #dd if=/dev/zero of=appliance-base.img oflag=direct bs=1M seek=${diskSizeMB} count=1
 #wget http://dl.dropbox.com/u/12189743/xen/${applianceName}/appliance-base.install.cfg
 #wget http://dl.dropbox.com/u/12189743/xen/${applianceName}/appliance-base.cfg
+
 
 # Edit the config files
 
@@ -87,11 +144,10 @@ echo "xm create -c appliance-base.install.cfg"
 echo "xm create -c appliance-base.cfg"
 
 # Add to VM start command
-vmStartCmds=${binDir}/start_all_vms
 touch ${vmStartCmds}
-cp ${vmStartCmds} ${vmStartCmds}.bak
-echo "pushd /xenvms/${applianceName} 2>%1 >/dev/null ; xm create -c appliance-base.cfg ; popd 2>%1 >/dev/null" >> ${vmStartCmds}.bak
-uniq < ${vmStartCmds}.bak >${vmStartCmds} 
+cp ${vmStartCmds} ${vmStartCmds}.${backupFileExtension}
+echo "pushd /xenvms/${applianceName} 2>%1 >/dev/null ; xm create -c appliance-base.cfg ; popd 2>%1 >/dev/null" >> ${vmStartCmds}.${backupFileExtension}
+uniq < ${vmStartCmds}.${backupFileExtension} >${vmStartCmds} 
 chmod a+x ${vmStartCmds}
 
 

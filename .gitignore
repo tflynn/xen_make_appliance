@@ -1,1 +1,5 @@
+*.bak
 dropbox_base_url
+vm_mac_addresses
+mount_all_vms
+start_all_vms
