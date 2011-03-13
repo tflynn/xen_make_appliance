@@ -1,0 +1,99 @@
+#!/bin/bash
+
+if [[ X$1 == X ]] ; then
+  echo "Usage: xen_make_appliance [bin_dir] [appliance name] [memory size in MB] [disk_size in GB]"
+  exit 1
+fi
+
+binDir=$1
+applianceName=$2
+applianceNameLowerCase=`echo ${applianceName} | tr '[:upper:]' '[:lower:]'`
+memorySizeMB=$3
+diskSizeGB=$4
+diskSizeMB=$(((diskSizeGB * 1000) - 100))
+vmMacAddresses="${binDir}/vm_mac_addresses"
+
+source ${binDir}/dropbox_base_url
+
+# Create the logical volume to hold the VM
+
+#sudo lvcreate -i5 -L${diskSizeGB}G -nlvol_${applianceNameLowerCase} vm_lvs
+#sudo mkfs -t ext3 /dev/vm_lvs/lvol_${applianceNameLowerCase}
+#sudo mkdir -p /xenvms/${applianceName}
+#sudo mount   /dev/vm_lvs/lvol_${applianceNameLowerCase}  /xenvms/${applianceName}
+
+echo "sudo lvcreate -i5 -L${diskSizeGB}G -nlvol_${applianceNameLowerCase} vm_lvs"
+echo "sudo mkfs -t ext3 /dev/vm_lvs/lvol_${applianceNameLowerCase}"
+echo "sudo mkdir -p /xenvms/${applianceName}"
+echo "sudo mount   /dev/vm_lvs/lvol_${applianceNameLowerCase}  /xenvms/${applianceName}"
+
+# Add to VM mount cmd
+vmMountCmds=${binDir}/mount_all_vms
+touch ${vmMountCmds}
+cp ${vmMountCmds} ${vmMountCmds}.bak
+echo "sudo mount   /dev/vm_lvs/lvol_${applianceNameLowerCase}  /xenvms/${applianceName}" >> ${vmMountCmds}.bak
+uniq < ${vmMountCmds}.bak >${vmMountCmds}
+chmod a+x ${vmMountCmds}
+
+# Create the VM itself
+#cd /xenvms/${applianceName}
+#dd if=/dev/zero of=appliance-base.img oflag=direct bs=1M seek=${diskSizeMB} count=1
+#wget http://dl.dropbox.com/u/12189743/xen/${applianceName}/appliance-base.install.cfg
+#wget http://dl.dropbox.com/u/12189743/xen/${applianceName}/appliance-base.cfg
+
+# Edit the config files
+
+# Get the next MAC address
+nextMacAddress=0
+if [[ -e ${vmMacAddresses} ]] ; then
+  while read inputLine
+  do
+    nextMacAddress=inputLine
+    break
+  done < ${vmMacAddresses}
+fi
+nextMacAddress=$((nextMacAddress + 1))
+echo "nextMacAddress ${nextMacAddress}"
+echo "${nextMacAddress}" > ${vmMacAddresses}
+nextMacAddressHex=`printf "%02X" ${nextMacAddress}`
+
+read -d '' APPLIANCE_BASE_CONFIGURATION << APPLIANCE_BASE_CONFIGURATION_DOC
+# Xen Configuration for appliance-base
+name   = "appliance-base"
+memory = "${memorySizeMB}"
+disk   = ['tap:aio:/xen/appliance-base/appliance-base.img,xvda,w',]
+vif    = ['bridge=xenbr0,mac=00:16:3e:00:00:${nextMacAddressHex}',]
+vcpus  = 1
+
+bootloader ="/usr/bin/pygrub"
+on_reboot  = 'restart'
+on_crash   = 'restart'
+APPLIANCE_BASE_CONFIGURATION_DOC
+
+echo "${APPLIANCE_BASE_CONFIGURATION}"
+
+
+echo "cd /xenvms/${applianceName}"
+echo "dd if=/dev/zero of=appliance-base.img oflag=direct bs=1M seek=${diskSizeMB} count=1"
+echo "wget http://dl.dropbox.com/u/12189743/xen/${applianceName}/appliance-base.install.cfg"
+echo "wget http://dl.dropbox.com/u/12189743/xen/${applianceName}/appliance-base.cfg"
+
+
+# Initialize the VM the first time
+#xm create -c appliance-base.install.cfg
+echo "xm create -c appliance-base.install.cfg"
+# Start it up the second time with standard options
+#xm create -c appliance-base.cfg
+echo "xm create -c appliance-base.cfg"
+
+# Add to VM start command
+vmStartCmds=${binDir}/start_all_vms
+touch ${vmStartCmds}
+cp ${vmStartCmds} ${vmStartCmds}.bak
+echo "pushd /xenvms/${applianceName} 2>%1 >/dev/null ; xm create -c appliance-base.cfg ; popd 2>%1 >/dev/null" >> ${vmStartCmds}.bak
+uniq < ${vmStartCmds}.bak >${vmStartCmds} 
+chmod a+x ${vmStartCmds}
+
+
+
+
