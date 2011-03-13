@@ -33,7 +33,7 @@ fi
 binDir=$1
 configurationDir=$2
 applianceName=$3
-applianceNameLowerCase=`echo ${applianceName} | tr '[:upper:]' '[:lower:]'`
+applianceName=`echo ${applianceName} | tr '[:upper:]' '[:lower:]'`
 memorySizeMB=$4
 diskSizeGB=$5
 # Calculate actual logical volume size as 100 MB less than requested to allow slop in sizing calculations
@@ -78,30 +78,31 @@ dropboxWriteDir=${DROPBOX_WRITE_DIR}
   
 # Create the logical volume to hold the VM
 
-logicalVolumeExists=`sudo /usr/sbin/lvscan | grep -c ${logicalVolumePrefix}${applianceNameLowerCase}`
+logicalVolumeExists=`sudo /usr/sbin/lvscan | grep -c ${logicalVolumePrefix}${applianceName}`
 if [[ X${logicalVolumeExists} == X0 ]] ; then
-  sudo /usr/sbin/lvcreate -i${logicalVolumeStripes} -L${diskSizeGB}G -n${logicalVolumePrefix}${applianceNameLowerCase} ${logicalVolumeGroupName}
-  sudo /sbin/mkfs -t ext3 /dev/${logicalVolumeGroupName}/${logicalVolumePrefix}${applianceNameLowerCase}
+  echo "Creating logical volume ${logicalVolumePrefix}${applianceName} ..."
+  sudo /usr/sbin/lvcreate -i${logicalVolumeStripes} -L${diskSizeGB}G -n${logicalVolumePrefix}${applianceName} ${logicalVolumeGroupName}
+  sudo /sbin/mkfs -t ext3 /dev/${logicalVolumeGroupName}/${logicalVolumePrefix}${applianceName}
   sudo mkdir -p ${baseVMMountPoint}/${applianceName}
-  sudo mount /dev/${logicalVolumeGroupName}/${logicalVolumePrefix}${applianceNameLowerCase}  ${baseVMMountPoint}/${applianceName}
+  sudo mount /dev/${logicalVolumeGroupName}/${logicalVolumePrefix}${applianceName}  ${baseVMMountPoint}/${applianceName}
 
   # Save off VM mount cmd
   touch ${vmMountCmds}
   cp ${vmMountCmds} ${vmMountCmds}.${backupFileExtension}
-  echo "sudo mount /dev/${logicalVolumeGroupName}/${logicalVolumePrefix}${applianceNameLowerCase}  ${baseVMMountPoint}/${applianceName}" >> ${vmMountCmds}.${backupFileExtension}
+  echo "sudo mount /dev/${logicalVolumeGroupName}/${logicalVolumePrefix}${applianceName}  ${baseVMMountPoint}/${applianceName}" >> ${vmMountCmds}.${backupFileExtension}
   uniq < ${vmMountCmds}.${backupFileExtension} >${vmMountCmds}
   chmod a+x ${vmMountCmds}
 
 else
-  echo "Logical volume ${logicalVolumePrefix}${applianceNameLowerCase} already exists. Skipping creation ..."
+  echo "Logical volume ${logicalVolumePrefix}${applianceName} already exists. Skipping creation ..."
 fi
 
 # Create the VM itself
 if [[ ! -e ${baseVMMountPoint}/${applianceName}/appliance-base.img ]] ; then
-  cd ${baseVMMountPoint}/${applianceName}
+  pushd ${baseVMMountPoint}/${applianceName} >/dev/null 2>%1
   dd if=/dev/zero of=appliance-base.img oflag=direct bs=1M seek=${diskSizeMB} count=1
-  #wget http://dl.dropbox.com/u/12189743/xen/${applianceName}/appliance-base.install.cfg
-  #wget http://dl.dropbox.com/u/12189743/xen/${applianceName}/appliance-base.cfg
+  popd
+  echo "Base VM disk image ${baseVMMountPoint}/${applianceName}/appliance-base.img created ..."
 else
   echo "Base VM disk image ${baseVMMountPoint}/${applianceName}/appliance-base.img already exists. Skipping VM Disk image creation ..."
 fi
@@ -139,7 +140,7 @@ else
   fi
 fi
 
-applianceWriteDir=${configurationBaseWriteDir}/${applianceNameLowerCase}
+applianceWriteDir=${configurationBaseWriteDir}/${applianceName}
 if [[ -e ${applianceWriteDir} ]] ; then
   echo "Appliance Configuration directory ${applianceWriteDir} exists. Skipping creation ..."
 else
@@ -151,7 +152,6 @@ fi
 partSizeMB=$((diskSizeMB - 200))
 # Calculate internal disk size as (100MB + swap size (256MB)) less than partition size
 diskSizeInternalMB=$((partSizeMB - 356))
-
 
 read -d '' APPLIANCE_BASE_KICKSTART_CONFIGURATION << APPLIANCE_BASE_KICKSTART_CONFIGURATION_DOC
 # Kickstart Configuration for MINIMAL CENTOS
@@ -168,7 +168,7 @@ skipx
 network --device eth0 --bootproto dhcp
 
 # The password is 'password'
-rootpw --iscrypted $1$h5ebo1pm$OHL3De9oalNzqIG1BUyJp0
+rootpw --iscrypted \$1\$h5ebo1pm\$OHL3De9oalNzqIG1BUyJp0
 firewall --disabled
 selinux --permissive
 authconfig --enableshadow --enablemd5
@@ -198,46 +198,88 @@ java
 %post
 APPLIANCE_BASE_KICKSTART_CONFIGURATION_DOC
 
-echo "${APPLIANCE_BASE_KICKSTART_CONFIGURATION}"
+# Kickstart file is stored on the remote file system
+if [[ -e ${applianceWriteDir}/ks.cfg ]] ; then
+  echo "Kickstart configuration ${applianceWriteDir}/ks.cfg already exists. Skipping ..."
+else
+  echo "${APPLIANCE_BASE_KICKSTART_CONFIGURATION}" > ${applianceWriteDir}/ks.cfg
+  echo "Create Kickstart configuration ${applianceWriteDir}/ks.cfg"
+fi
 
-exit 1
+# The non-kickstart files are access on a local file system
+
+applianceWriteDir=${baseVMMountPoint}/${applianceName}
+
+read -d '' APPLIANCE_BASE_INSTALL_CONFIGURATION << APPLIANCE_BASE_INSTALL_CONFIGURATION_DOC
+# Xen Configuration for INSTALL of appliance-base
+kernel  = "/xen/vmlinuz"
+ramdisk = "/xen/initrd.img"
+extra   = "text ks=${dropboxBaseUrl}/${applianceName}/ks.cfg"
+name    = "${applianceName}"
+memory  = "${memorySizeMB}"
+disk    = ['tap:aio:/xenvms/${applianceName}/appliance-base.img,xvda,w',]
+vif     = ['bridge=xenbr0,mac=00:16:3e:00:00:${nextMacAddressHex}',]
+vcpus   = 1
+
+on_reboot = 'destroy'
+on_crash  = 'destroy'
+APPLIANCE_BASE_INSTALL_CONFIGURATION_DOC
+
+if [[ -e ${applianceWriteDir}/appliance_base.install.cfg ]] ; then
+  echo "Configuration ${applianceWriteDir}/appliance_base.install.cfg already exists. Skipping ..."
+else
+  echo "${APPLIANCE_BASE_INSTALL_CONFIGURATION}" > ${applianceWriteDir}/appliance_base.install.cfg
+  echo "Created configuration ${applianceWriteDir}/appliance_base.install.cfg"
+fi
 
 read -d '' APPLIANCE_BASE_CONFIGURATION << APPLIANCE_BASE_CONFIGURATION_DOC
 # Xen Configuration for appliance-base
-name   = "appliance-base"
-memory = "${memorySizeMB}"
-disk   = ['tap:aio:/xen/appliance-base/appliance-base.img,xvda,w',]
-vif    = ['bridge=xenbr0,mac=00:16:3e:00:00:${nextMacAddressHex}',]
-vcpus  = 1
+kernel  = "/xen/vmlinuz"
+ramdisk = "/xen/initrd.img"
+name    = "${applianceName}"
+memory  = "${memorySizeMB}"
+disk    = ['tap:aio:/xenvms/${applianceName}/appliance-base.img,xvda,w',]
+vif     = ['bridge=xenbr0,mac=00:16:3e:00:00:${nextMacAddressHex}',]
+vcpus   = 1
 
 bootloader ="/usr/bin/pygrub"
 on_reboot  = 'restart'
 on_crash   = 'restart'
 APPLIANCE_BASE_CONFIGURATION_DOC
 
-echo "${APPLIANCE_BASE_CONFIGURATION}"
+if [[ -e ${applianceWriteDir}/appliance_base.cfg ]] ; then
+  echo "Configuration ${applianceWriteDir}/appliance_base.cfg already exists. Skipping ..."
+else
+  echo "${APPLIANCE_BASE_CONFIGURATION}" > ${applianceWriteDir}/appliance_base.cfg
+  echo "Created configuration ${applianceWriteDir}/appliance_base.cfg"
+fi
 
-
-echo "cd /xenvms/${applianceName}"
-echo "dd if=/dev/zero of=appliance-base.img oflag=direct bs=1M seek=${diskSizeMB} count=1"
-echo "wget http://dl.dropbox.com/u/12189743/xen/${applianceName}/appliance-base.install.cfg"
-echo "wget http://dl.dropbox.com/u/12189743/xen/${applianceName}/appliance-base.cfg"
-
-
-# Initialize the VM the first time
-#xm create -c appliance-base.install.cfg
-echo "xm create -c appliance-base.install.cfg"
-# Start it up the second time with standard options
-#xm create -c appliance-base.cfg
-echo "xm create -c appliance-base.cfg"
+# TODO check to see whether the VM exists and is running
 
 # Add to VM start command
 touch ${vmStartCmds}
 cp ${vmStartCmds} ${vmStartCmds}.${backupFileExtension}
-echo "pushd /xenvms/${applianceName} 2>%1 >/dev/null ; xm create -c appliance-base.cfg ; popd 2>%1 >/dev/null" >> ${vmStartCmds}.${backupFileExtension}
+echo "pushd /xenvms/${applianceName} 2>%1 >/dev/null ; xm create -c appliance-base.cfg ; >/dev/nul popd 2>%1 l" >> ${vmStartCmds}.${backupFileExtension}
 uniq < ${vmStartCmds}.${backupFileExtension} >${vmStartCmds} 
 chmod a+x ${vmStartCmds}
 
+exit 1
+
+pushd ${baseVMMountPoint}/${applianceName} >/dev/null 2>%1
+
+
+# Initialize the VM the first time
+echo "Initializing VM ${applianceName} for the first time"
+sudo xm create -c appliance-base.install.cfg
+
+
+# Start it up the second time with standard options
+echo "Starting VM ${applianceName}"
+xm create -c appliance-base.cfg
+
+
+
+popd >/dev/null 2>%1
 
 
 
