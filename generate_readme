@@ -1,0 +1,40 @@
+#!/bin/bash
+
+# File to generate a readme.html from a readme in textile format
+
+# Assumes a command of the format (with appropriate comments removed)
+
+# File: textile2html
+# ---------------------
+#!/usr/bin/env ruby
+
+#require 'rubygems'
+#gem 'RedCloth'
+#require 'redcloth'
+#puts RedCloth.new( ARGF.read ).to_html
+
+# ---------------------
+
+read -d '' HTML_HEADER << 'HTML_HEADER'
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+  <head>
+    <title>xen_create_appliance - README</title>  
+  </head>
+  
+  <body>
+HTML_HEADER
+read -d '' HTML_FOOTER << 'HTML_FOOTER'
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+  <head>
+    <title>xen_create_appliance - README</title>  
+  </head>
+  
+  <body>
+HTML_FOOTER
+
+readmeFileName='readme.html'
+echo $HTML_HEADER >${readmeFileName}
+textile2html readme.textile >>${readmeFileName}
+echo $HTML_FOOTER >>${readmeFileName}
