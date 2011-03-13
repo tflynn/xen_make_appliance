@@ -8,10 +8,9 @@ h1. Prerequisites
 
 h2. Dropbox account and setup
 
-p. The dropbox account is used to hold generated configuration file so that they are accessible during initialization of a VM. Any other mechanism that provides a read/write store could be equally well used.
+p. The dropbox account is used to hold generated configuration files so that they are accessible during initialization of a VM. Any other mechanism that provides a read/write store could be equally well used. The read side of the store should be visible at an HTTP URL.
 
-p. Install "Dropbox for Linux":http://www.dropbox.com/downloading?os=lnx. Probably connected it to a non-VM instance (this is the only
-      combination tested).
+p. Install "Dropbox for Linux":http://www.dropbox.com/downloading?os=lnx. Probably connected it to a non-VM instance (this is the only combination tested).
 
 p. This script will create a directory tree in ~/Dropbox/Public/xen with VM-specific subdirectories containing configuration files. 
     
@@ -21,11 +20,10 @@ p.  An LVM setup is assumed. See the separate 'readme_lvm.html'.
 
 h1. Configuration
 
-p. There are several files which are not part of the distribution
-(deliberately). These are:
+p. There are several files which are not part of the distribution (deliberately). These are:
 
 * dropbox_base_url - A file containing a public URL to a dropbox account
-* xen_create_appliance.config - A file containt site-specific configuration information for this script.
+* xen_create_appliance.config - A file containt site-specific configuration information for this script. (A sample is provided below.)
 
 h2. File: dropbox_base_url
 
@@ -48,7 +46,7 @@ LOGICAL_VOLUME_GROUP_NAME='vm_lvs'
 # Prefix for logical volume for a given VM
 LOGICAL_VOLUME_PREFIX="lvol_"
 
-# Number of stripes to use in logical volume setup
+# Number of stripes to use in VM logical volume allocation
 LOGICAL_VOLUME_TOTAL_STRIPES=5
 
 # Base mount point in host system for VM disk images

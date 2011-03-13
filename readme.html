@@ -14,11 +14,10 @@
 	<h2>Dropbox account and setup</h2>
 
 
-	<p>The dropbox account is used to hold generated configuration file so that they are accessible during initialization of a VM. Any other mechanism that provides a read/write store could be equally well used.</p>
+	<p>The dropbox account is used to hold generated configuration files so that they are accessible during initialization of a VM. Any other mechanism that provides a read/write store could be equally well used. The read side of the store should be visible at an <span class="caps">HTTP URL</span>.</p>
 
 
-	<p>Install <a href="http://www.dropbox.com/downloading?os=lnx">Dropbox for Linux</a>. Probably connected it to a non-VM instance (this is the only
-      combination tested).</p>
+	<p>Install <a href="http://www.dropbox.com/downloading?os=lnx">Dropbox for Linux</a>. Probably connected it to a non-VM instance (this is the only combination tested).</p>
 
 
 	<p>This script will create a directory tree in ~/Dropbox/Public/xen with VM-specific subdirectories containing configuration files.</p>
@@ -33,13 +32,12 @@
 	<h1>Configuration</h1>
 
 
-	<p>There are several files which are not part of the distribution
-(deliberately). These are:</p>
+	<p>There are several files which are not part of the distribution (deliberately). These are:</p>
 
 
 	<ul>
 	<li>dropbox_base_url &#8211; A file containing a public <span class="caps">URL</span> to a dropbox account</li>
-		<li>xen_create_appliance.config &#8211; A file containt site-specific configuration information for this script.</li>
+		<li>xen_create_appliance.config &#8211; A file containt site-specific configuration information for this script. (A sample is provided below.)</li>
 	</ul>
 
 
@@ -67,7 +65,7 @@ LOGICAL_VOLUME_GROUP_NAME='vm_lvs'
 # Prefix for logical volume for a given VM
 LOGICAL_VOLUME_PREFIX="lvol_" 
 
-# Number of stripes to use in logical volume setup
+# Number of stripes to use in VM logical volume allocation
 LOGICAL_VOLUME_TOTAL_STRIPES=5
 
 # Base mount point in host system for VM disk images
@@ -79,4 +77,4 @@ BASE_VM_MOUNT_POINT=/xenvms
 BACKUP_FILE_EXTENSION=bak
 
 </pre>
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"> <html> <head> <title>xen_create_appliance - README</title> </head> <body>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"> </body> </html>

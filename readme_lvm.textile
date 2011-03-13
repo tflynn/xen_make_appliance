@@ -1,0 +1,41 @@
+h1. Introduction
+
+p. These notes detail the LVM setup used by the accompanying *xen_make_appliance* script. They represent a full Centos 5 LVM setup from scratch. No doubt more elegant solutions exist.
+
+p.  If you find some component is missing, use 'sudo yum -y install [component]' to install it.
+
+h1. Disk configuration used
+
+p. The setup described below applies to a configuration with five identical 1GB SATA disks - /dev/sdb through /dev/sdf
+    
+p  The disk image for a VM is a logical volume that's striped across the five physical disks.</p>
+    
+h1. Partitioning the disks
+
+p. Use <strong><code>/sbin/parted</code></strong> not <code>/sbin/fdisk</code>
+
+p. For each disk - /dev/sdb through /dev/sdf
+
+<pre>
+# Create a basic partition - DOS style
+sudo parted -s /dev/sdb mklabel msdos
+# Partition the entire disk as a single primary partition
+sudo parted -s /dev/sdb mkpart primary 0 1000000
+</pre>
+
+h1. Create an LVM physical disk
+
+<pre>
+# Create an LVM physical disk from the entire primary partition
+sudo pvcreate /dev/sdb1
+</pre>
+<h1>Create an LVM volume group</h1>
+<p>When all of the LVM physical disks have been created:</p>
+<pre>
+# Combine all the LVM physical disks into a single LVM volume group 'vms'
+sudo vgcreate vms /dev/sdb1 /dev/sdc1 /dev/sdd1 /dev/sde1 /dev/sdf1
+</pre>
+
+
+
+

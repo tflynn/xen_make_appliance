@@ -1,41 +1,49 @@
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
-<html>
-  <head>
-    <title>xen_create_appliance - README LVM</title>  
-  </head>
-  
-  <body>
-    <h1>Introduction</h1>
-    <p>These notes detail the LVM setup used by the accompanying <strong>xen_make_appliance</strong> script. They represent a full Centos 5 LVM setup from scratch. No doubt more elegant solutions exist.</p>
-    
-    <p>If you find some component is missing, use 'sudo yum -y install [component]' to install it.</p>
-    
-    <h1>Disk configuration used</h1>
-    
-    <p>The setup described below applies to a configuration with five identical 1GB SATA disks - /dev/sdb through /dev/sdf</p>
-    <p>The disk image for a VM is a logical volume that's striped across the five physical disks.</p>
-    
-    <h1>Partitioning the disks</h1>
-    <p>Use <strong><code>/sbin/parted</code></strong> not <code>/sbin/fdisk</code></p>
-    <p>For each disk - /dev/sdb through /dev/sdf</p>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"> <html> <head> <title>xen_create_appliance - README LVM</title> </head> <body>
+<h1>Introduction</h1>
+
+
+	<p>These notes detail the <span class="caps">LVM</span> setup used by the accompanying <strong>xen_make_appliance</strong></strong>* script. They represent a full Centos 5 <span class="caps">LVM</span> setup from scratch. No doubt more elegant solutions exist.</p>
+
+
+	<p> If you find some component is missing, use &#8216;sudo yum -y install [component]&#8217; to install it.</p>
+
+
+	<h1>Disk configuration used</h1>
+
+
+	<p>The setup described below applies to a configuration with five identical 1GB <span class="caps">SATA</span> disks &#8211; /dev/sdb through /dev/sdf</p>
+
+
+	<p>p  The disk image for a VM is a logical volume that&#8217;s striped across the five physical disks.</p></p>
+
+
+	<h1>Partitioning the disks</h1>
+
+
+	<p>Use <strong><code>/sbin/parted</code></strong> not <code>/sbin/fdisk</code></p>
+
+
+	<p>For each disk &#8211; /dev/sdb through /dev/sdf</p>
+
+
 <pre>
 # Create a basic partition - DOS style
 sudo parted -s /dev/sdb mklabel msdos
 # Partition the entire disk as a single primary partition
 sudo parted -s /dev/sdb mkpart primary 0 1000000
 </pre>
-<h1>Create an LVM physical disk</h1>
+
+	<h1>Create an <span class="caps">LVM</span> physical disk</h1>
+
+
 <pre>
 # Create an LVM physical disk from the entire primary partition
 sudo pvcreate /dev/sdb1
 </pre>
-<h1>Create an LVM volume group</h1>
-<p>When all of the LVM physical disks have been created:</p>
+<h1>Create an <span class="caps">LVM</span> volume group</h1>
+<p>When all of the <span class="caps">LVM</span> physical disks have been created:</p>
 <pre>
 # Combine all the LVM physical disks into a single LVM volume group 'vms'
 sudo vgcreate vms /dev/sdb1 /dev/sdc1 /dev/sdd1 /dev/sde1 /dev/sdf1
 </pre>
-
-
-
-
+</body> </html>
