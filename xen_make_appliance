@@ -36,6 +36,7 @@ applianceName=$3
 applianceNameLowerCase=`echo ${applianceName} | tr '[:upper:]' '[:lower:]'`
 memorySizeMB=$4
 diskSizeGB=$5
+# Calculate actual logical volume size as 100 MB less than requested to allow slop in sizing calculations
 diskSizeMB=$(((diskSizeGB * 1000) - 100))
 
 vmMacAddresses="${configurationDir}/vm_mac_addresses"
@@ -95,10 +96,6 @@ else
   echo "Logical volume ${logicalVolumePrefix}${applianceNameLowerCase} already exists. Skipping creation ..."
 fi
 
-
-
-
-
 # Create the VM itself
 if [[ ! -e ${baseVMMountPoint}/${applianceName}/appliance-base.img ]] ; then
   cd ${baseVMMountPoint}/${applianceName}
@@ -106,12 +103,13 @@ if [[ ! -e ${baseVMMountPoint}/${applianceName}/appliance-base.img ]] ; then
   #wget http://dl.dropbox.com/u/12189743/xen/${applianceName}/appliance-base.install.cfg
   #wget http://dl.dropbox.com/u/12189743/xen/${applianceName}/appliance-base.cfg
 else
-  echo "Base VM disk image ${baseVMMountPoint}/${applianceName}/appliance-base.img already exists. Skipping VM Disk image creation"
+  echo "Base VM disk image ${baseVMMountPoint}/${applianceName}/appliance-base.img already exists. Skipping VM Disk image creation ..."
 fi
 
-exit 1
+########
+# Generate the configuration files
+########
 
-# Edit the config files
 
 # Get the next MAC address
 nextMacAddress=0
@@ -123,9 +121,86 @@ if [[ -e ${vmMacAddresses} ]] ; then
   done < ${vmMacAddresses}
 fi
 nextMacAddress=$((nextMacAddress + 1))
-echo "nextMacAddress ${nextMacAddress}"
+if [[ X${DEBUG} == true ]] ; then
+  echo "nextMacAddress ${nextMacAddress}"
+fi
+
 echo "${nextMacAddress}" > ${vmMacAddresses}
 nextMacAddressHex=`printf "%02X" ${nextMacAddress}`
+
+configurationBaseWriteDir=${dropboxWriteDir}
+if [[ X${configurationBaseWriteDir} == X ]] ; then
+  echo "DROPBOX_WRITE_DIR must be defined in file 'dropbox_base_url"
+  exit 1
+else
+  if [[ ! -e ${configurationBaseWriteDir} ]] ; then
+    echo "DROPBOX_WRITE_DIR defined as ${configurationBaseWriteDir} but directory does not exit"
+    exit 1
+  fi
+fi
+
+applianceWriteDir=${configurationBaseWriteDir}/${applianceNameLowerCase}
+if [[ -e ${applianceWriteDir} ]] ; then
+  echo "Appliance Configuration directory ${applianceWriteDir} exists. Skipping creation ..."
+else
+  echo "Appliance Configuration directory ${applianceWriteDir} does not exist. Creating ..."
+  sudo mkdir -p ${applianceWriteDir}
+fi
+
+# Calculate partition size as (100MB + 100MB boot partition) less tham logical volume size to allow for slop in sizing calculations
+partSizeMB=$((diskSizeMB - 200))
+# Calculate internal disk size as (100MB + swap size (256MB)) less than partition size
+diskSizeInternalMB=$((partSizeMB - 356))
+
+
+read -d '' APPLIANCE_BASE_KICKSTART_CONFIGURATION << APPLIANCE_BASE_KICKSTART_CONFIGURATION_DOC
+# Kickstart Configuration for MINIMAL CENTOS
+install
+text
+reboot
+
+url --url http://mirror.centos.org/centos/5.5/os/x86_64/
+lang en_US.UTF-8
+langsupport --default=en_US.UTF-8 en_US.UTF-8
+keyboard us
+
+skipx
+network --device eth0 --bootproto dhcp
+
+# The password is 'password'
+rootpw --iscrypted $1$h5ebo1pm$OHL3De9oalNzqIG1BUyJp0
+firewall --disabled
+selinux --permissive
+authconfig --enableshadow --enablemd5
+timezone America/New_York
+
+bootloader --location=mbr
+clearpart --all --initlabel
+part /boot --fstype ext3 --size=100
+part pv.2 --size=${partSizeMB} --grow
+volgroup VolGroup00 --pesize=65536 pv.2
+logvol /    --fstype ext3 --name=LogVol00 --vgname=VolGroup00 --size=${diskSizeInternalMB} --grow
+logvol swap --fstype swap --name=LogVol01 --vgname=VolGroup00 --size=256
+%packages --nobase
+coreutils
+bind-utils
+yum
+rpm
+e2fsprogs
+lvm2
+grub
+sysstat
+ntp
+openssh-server
+openssh-clients
+wget
+java
+%post
+APPLIANCE_BASE_KICKSTART_CONFIGURATION_DOC
+
+echo "${APPLIANCE_BASE_KICKSTART_CONFIGURATION}"
+
+exit 1
 
 read -d '' APPLIANCE_BASE_CONFIGURATION << APPLIANCE_BASE_CONFIGURATION_DOC
 # Xen Configuration for appliance-base
