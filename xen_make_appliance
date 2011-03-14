@@ -280,7 +280,7 @@ if [[ X${sourceVMImage} != X ]] ; then
 else
   # Initialize the VM the first time
   echo "Initializing VM ${applianceName} for the first time"
-  sudo xm create -c appliance-base_install.cfg
+  sudo xm create -c appliance_base_install.cfg
 fi
 
 # Start it up the second time with standard options
