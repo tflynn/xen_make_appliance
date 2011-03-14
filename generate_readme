@@ -54,3 +54,24 @@ readmeFileName='readme_lvm.html'
 echo $HTML_HEADER_1 >${readmeFileName}
 textile2html readme_lvm.textile >>${readmeFileName}
 echo $HTML_FOOTER_1 >>${readmeFileName}
+
+
+read -d '' HTML_HEADER_2 << 'HTML_HEADER_2'
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+  <head>
+    <title>xen_create_appliance - README CENTOS LOCAL MIRROR</title>  
+  </head>
+  
+  <body>
+HTML_HEADER_2
+
+read -d '' HTML_FOOTER_2 << 'HTML_FOOTER_2'
+  </body>
+</html>
+HTML_FOOTER_2
+
+readmeFileName='readme_local_centos_mirror.html'
+echo $HTML_HEADER_2 >${readmeFileName}
+textile2html readme_local_centos_mirror.textile >>${readmeFileName}
+echo $HTML_FOOTER_2 >>${readmeFileName}

@@ -1,0 +1,74 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"> <html> <head> <title>xen_create_appliance - README CENTOS LOCAL MIRROR</title> </head> <body>
+<h1>Creating a Local Centos Installation Mirror</h1>
+
+
+	<p>With thanks to &#8216;http://drcs.ca/blog/how-to-mirror-centos-5-and-use-it-as-a-local-yum-repository/&#8217;.</p>
+
+
+	<p>To create a local Centos mirror sufficient for installation purposes for a Centos kickstart installation follow these instructions.</p>
+
+
+	<h2>Copy the installation structure</h2>
+
+
+	<p>Perform the following group of instructions for each of the Centos installation DVDs. For installation CDs, adjust as appropriate.</p>
+
+
+	<p>Mount the Centos installation <span class="caps">DVD</span>.</p>
+
+
+<pre>
+sudo mkdir -p /mnt/dvd
+sudo mount /dev/dvd /mnt/dvd
+</pre>
+
+	<p>Create a destination directory structure (assumes the Centos 5.5 64-bit distribution &#8211; adjust as appropriate)</p>
+
+
+<pre>
+  sudo mkdir -p /usr/share/centos/5.5/os/x86_64/
+</pre>
+
+	<p>Copy the files from the CD preserving all attributes</p>
+
+
+<pre>
+  sudo /usr/binrsync -avHPS /mnt/dvd/ /usr/share/centos/5.5/os/x86_64/
+</pre>
+
+	<h2>Install and configure Apache web server</h2>
+
+
+	<p>Install the Apache web server</p>
+
+
+<pre>
+  sudo yum -y install httpd
+</pre>
+
+	<p>Configure the web server. There are various ways of doing this. The easiest two follow.</p>
+
+
+<pre>
+  sudo ln -s /usr/share/centos /var/www/html/centos
+</pre>
+
+	<p>or, in /etc/httpd/conf/httpd.conf</p>
+
+
+<pre>
+  &lt;Directory "/usr/share"&gt;
+      Options Indexes MultiViews FollowSymLinks
+      AllowOverride None
+      Order allow,deny
+      Allow from all
+  &lt;/Directory&gt;
+</pre>
+
+	<p>Start the web server</p>
+
+
+<pre>
+  sudo /sbin/service httpd start
+</pre>
+</body> </html>

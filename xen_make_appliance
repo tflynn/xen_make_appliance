@@ -99,9 +99,9 @@ fi
 
 # Create the VM itself
 if [[ ! -e ${baseVMMountPoint}/${applianceName}/appliance-base.img ]] ; then
-  pushd ${baseVMMountPoint}/${applianceName} >/dev/null 2>%1
+  pushd ${baseVMMountPoint}/${applianceName} >/dev/null 2>&1
   dd if=/dev/zero of=appliance-base.img oflag=direct bs=1M seek=${diskSizeMB} count=1
-  popd >/dev/null 2>%1
+  popd >/dev/null 2>&1
   echo "Base VM disk image ${baseVMMountPoint}/${applianceName}/appliance-base.img created ..."
 else
   echo "Base VM disk image ${baseVMMountPoint}/${applianceName}/appliance-base.img already exists. Skipping VM Disk image creation ..."
@@ -159,7 +159,8 @@ install
 text
 reboot
 
-url --url http://mirror.centos.org/centos/5.5/os/x86_64/
+#url --url http://mirror.centos.org/centos/5.5/os/x86_64/
+url --url ${CENTOS_KICKSTART_REPO}
 lang en_US.UTF-8
 langsupport --default=en_US.UTF-8 en_US.UTF-8
 keyboard us
@@ -259,7 +260,7 @@ fi
 # Add to VM start command
 touch ${vmStartCmds}
 cp ${vmStartCmds} ${vmStartCmds}.${backupFileExtension}
-echo "pushd /xenvms/${applianceName} >/dev/null 2>%1 ; sudo xm create -c appliance-base.cfg ; popd >/dev/null 2>%1 " >> ${vmStartCmds}.${backupFileExtension}
+echo "pushd /xenvms/${applianceName} >/dev/null 2>&1 ; sudo xm create -c appliance-base.cfg ; popd >/dev/null 2>&1 " >> ${vmStartCmds}.${backupFileExtension}
 uniq < ${vmStartCmds}.${backupFileExtension} >${vmStartCmds} 
 chmod a+x ${vmStartCmds}
 
@@ -279,21 +280,21 @@ elif [[ X${diskSizeGB} == X20 ]] ; then
   fi
 fi  
 
-pushd ${baseVMMountPoint}/${applianceName} >/dev/null 2>%1
+pushd ${baseVMMountPoint}/${applianceName} >/dev/null 2>&1
 
 if [[ X${sourceVMImage} != X ]] ; then
   sudo rsync -a ${sourceVMImage} .
 else
   # Initialize the VM the first time
   echo "Initializing VM ${applianceName} for the first time"
-  sudo xm create -c appliance_base_install.cfg
+  sudo xm create -c appliance_base.install.cfg
 fi
 
 # Start it up the second time with standard options
 echo "Starting VM ${applianceName}"
 sudo xm create -c appliance_base.cfg
 
-popd >/dev/null 2>%1
+popd >/dev/null 2>&1
 
 
 

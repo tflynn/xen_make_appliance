@@ -75,7 +75,23 @@ BASE_VM_MOUNT_POINT=/xenvms
 #
 BACKUP_FILE_EXTENSION=bak
 
+# Local Centos Repository
+# 
+# Default
+# CENTOS_KICKSTART_REPO=http://mirror.centos.org/centos/5.5/os/x86_64/
+# Local
+CENTOS_KICKSTART_REPO=http://10.0.1.18/centos/5.5/os/x86_64/
+
 </pre>
+
+	<h3>Local Centos mirror</h3>
+
+
+	<p>Installing from a local Centos mirror is <strong>much</strong> faster than accessing the standard Centos mirrors over the network.</p>
+
+
+	<p>The VM Centos kickstart configuration system uses a portion of the standard Centos repository. That portion of the repository is available on the Centos installation DVDs or CDs. See &#8216;readme_local_centos_mirror.html&#8217; for setup instructions.</p>
+
 
 	<h2>Useful tools</h2>
 
