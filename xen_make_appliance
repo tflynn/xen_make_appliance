@@ -260,7 +260,7 @@ fi
 # Add to VM start command
 touch ${vmStartCmds}
 cp ${vmStartCmds} ${vmStartCmds}.${backupFileExtension}
-echo "pushd /xenvms/${applianceName} >/dev/null 2>&1 ; sudo xm create -c appliance-base.cfg ; popd >/dev/null 2>&1 " >> ${vmStartCmds}.${backupFileExtension}
+echo "pushd /xenvms/${applianceName} >/dev/null 2>&1 ; sudo xm create appliance_base.cfg ; popd >/dev/null 2>&1 " >> ${vmStartCmds}.${backupFileExtension}
 uniq < ${vmStartCmds}.${backupFileExtension} >${vmStartCmds} 
 chmod a+x ${vmStartCmds}
 
@@ -278,6 +278,10 @@ elif [[ X${diskSizeGB} == X20 ]] ; then
   if [[ -e /xenvms/baseos20/appliance-base.img ]] ; then
     sourceVMImage="/xenvms/baseos20/appliance-base.img"
   fi
+elif [[ X${diskSizeGB} == X30 ]] ; then
+  if [[ -e /xenvms/baseos30/appliance-base.img ]] ; then
+    sourceVMImage="/xenvms/baseos30/appliance-base.img"
+  fi
 fi  
 
 pushd ${baseVMMountPoint}/${applianceName} >/dev/null 2>&1
@@ -292,7 +296,7 @@ fi
 
 # Start it up the second time with standard options
 echo "Starting VM ${applianceName}"
-sudo xm create -c appliance_base.cfg
+sudo xm create appliance_base.cfg
 
 popd >/dev/null 2>&1
 
