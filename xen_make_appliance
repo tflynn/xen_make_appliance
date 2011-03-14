@@ -101,7 +101,7 @@ fi
 if [[ ! -e ${baseVMMountPoint}/${applianceName}/appliance-base.img ]] ; then
   pushd ${baseVMMountPoint}/${applianceName} >/dev/null 2>%1
   dd if=/dev/zero of=appliance-base.img oflag=direct bs=1M seek=${diskSizeMB} count=1
-  popd
+  popd >/dev/null 2>%1
   echo "Base VM disk image ${baseVMMountPoint}/${applianceName}/appliance-base.img created ..."
 else
   echo "Base VM disk image ${baseVMMountPoint}/${applianceName}/appliance-base.img already exists. Skipping VM Disk image creation ..."
@@ -202,8 +202,8 @@ APPLIANCE_BASE_KICKSTART_CONFIGURATION_DOC
 if [[ -e ${applianceWriteDir}/ks.cfg ]] ; then
   echo "Kickstart configuration ${applianceWriteDir}/ks.cfg already exists. Skipping ..."
 else
+  echo "Creating Kickstart configuration ${applianceWriteDir}/ks.cfg"
   echo "${APPLIANCE_BASE_KICKSTART_CONFIGURATION}" > ${applianceWriteDir}/ks.cfg
-  echo "Create Kickstart configuration ${applianceWriteDir}/ks.cfg"
 fi
 
 # The non-kickstart files are access on a local file system
@@ -228,8 +228,8 @@ APPLIANCE_BASE_INSTALL_CONFIGURATION_DOC
 if [[ -e ${applianceWriteDir}/appliance_base.install.cfg ]] ; then
   echo "Configuration ${applianceWriteDir}/appliance_base.install.cfg already exists. Skipping ..."
 else
+  echo "Creating configuration ${applianceWriteDir}/appliance_base.install.cfg"
   echo "${APPLIANCE_BASE_INSTALL_CONFIGURATION}" > ${applianceWriteDir}/appliance_base.install.cfg
-  echo "Created configuration ${applianceWriteDir}/appliance_base.install.cfg"
 fi
 
 read -d '' APPLIANCE_BASE_CONFIGURATION << APPLIANCE_BASE_CONFIGURATION_DOC
@@ -250,8 +250,8 @@ APPLIANCE_BASE_CONFIGURATION_DOC
 if [[ -e ${applianceWriteDir}/appliance_base.cfg ]] ; then
   echo "Configuration ${applianceWriteDir}/appliance_base.cfg already exists. Skipping ..."
 else
+  echo "Creating configuration ${applianceWriteDir}/appliance_base.cfg"
   echo "${APPLIANCE_BASE_CONFIGURATION}" > ${applianceWriteDir}/appliance_base.cfg
-  echo "Created configuration ${applianceWriteDir}/appliance_base.cfg"
 fi
 
 # TODO check to see whether the VM exists and is running
@@ -259,24 +259,30 @@ fi
 # Add to VM start command
 touch ${vmStartCmds}
 cp ${vmStartCmds} ${vmStartCmds}.${backupFileExtension}
-echo "pushd /xenvms/${applianceName} 2>%1 >/dev/null ; xm create -c appliance-base.cfg ; >/dev/nul popd 2>%1 l" >> ${vmStartCmds}.${backupFileExtension}
+echo "pushd /xenvms/${applianceName} >/dev/null 2>%1 ; sudo xm create -c appliance-base.cfg ; popd >/dev/null 2>%1 " >> ${vmStartCmds}.${backupFileExtension}
 uniq < ${vmStartCmds}.${backupFileExtension} >${vmStartCmds} 
 chmod a+x ${vmStartCmds}
 
 # Take advantage of standard configurations
 sourceVMImage=''
 if [[ X${diskSizeGB} == X5 ]] ; then
-  sourceVMImage="/xenvms/baseos/appliance-base.img"
+  if [[ -e /xenvms/baseos/appliance-base.img ]] ; then
+    sourceVMImage="/xenvms/baseos/appliance-base.img"
+  fi
 elif [[ X${diskSizeGB} == X10 ]] ; then
-  sourceVMImage="/xenvms/baseos10/appliance-base.img"
+  if [[ -e /xenvms/baseos10/appliance-base.img ]] ; then
+    sourceVMImage="/xenvms/baseos10/appliance-base.img"
+  fi
 elif [[ X${diskSizeGB} == X20 ]] ; then
-  sourceVMImage="/xenvms/baseos20/appliance-base.img"
+  if [[ -e /xenvms/baseos20/appliance-base.img ]] ; then
+    sourceVMImage="/xenvms/baseos20/appliance-base.img"
+  fi
 fi  
 
 pushd ${baseVMMountPoint}/${applianceName} >/dev/null 2>%1
 
 if [[ X${sourceVMImage} != X ]] ; then
-  rsync -a ${sourceVMImage} .
+  sudo rsync -a ${sourceVMImage} .
 else
   # Initialize the VM the first time
   echo "Initializing VM ${applianceName} for the first time"
@@ -285,7 +291,7 @@ fi
 
 # Start it up the second time with standard options
 echo "Starting VM ${applianceName}"
-xm create -c appliance_base.cfg
+sudo xm create -c appliance_base.cfg
 
 popd >/dev/null 2>%1
 

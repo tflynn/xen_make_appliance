@@ -12,7 +12,7 @@ p. The dropbox account is used to hold generated configuration files so that the
 
 p. Install "Dropbox for Linux":http://www.dropbox.com/downloading?os=lnx. Probably connect it to a non-VM instance (this is the only combination tested).
 
-p. This script will create a directory tree in ~/Dropbox/Public/xen with VM-specific subdirectories containing configuration files. Change this by changing the contents of the file 'dropbox_base_url'.
+p. This script will create a directory tree in ~/Dropbox/Public/xen with VM-specific subdirectories containing Centos kickstart configuration files. Change this by changing the contents of the file 'dropbox_base_url'.
     
 h2. LVM Setup
 
@@ -57,3 +57,16 @@ BASE_VM_MOUNT_POINT=/xenvms
 BACKUP_FILE_EXTENSION=bak
 
 </pre>
+
+h2. Useful tools
+
+h3. VM Mount and startup commands
+
+p. The file './data/mount_all_vms' contains a command to mount the logical volume containing the VM for each distinctly named VM created.
+
+p. The file './data/start_all_vms' contains a command to start the VM for each distinctly name VM created.
+
+h3. Prebuilt configurations
+
+p. If the following VMs  are prebuilt - 'baseos', 'baseos10' and 'baseos20' - then they will be copied whenever requests for a VM with 5GB, 10GB and 20GB is received. This is easy to extend.
+
