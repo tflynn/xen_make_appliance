@@ -190,12 +190,23 @@ rpm
 e2fsprogs
 lvm2
 grub
+gcc
+readline-devel
+make
+zlib
+zlib-devel
+zip
+unzip
 sysstat
 ntp
 openssh-server
 openssh-clients
 wget
 java
+which
+telnet
+rsync
+man
 %post
 APPLIANCE_BASE_KICKSTART_CONFIGURATION_DOC
 
