@@ -78,18 +78,18 @@ dropboxWriteDir=${DROPBOX_WRITE_DIR}
   
 # Create the logical volume to hold the VM
 
-logicalVolumeExists=`sudo /usr/sbin/lvscan | grep -c ${logicalVolumePrefix}${applianceName}`
+logicalVolumeExists=`sudo -E /usr/sbin/lvscan | grep -c ${logicalVolumePrefix}${applianceName}`
 if [[ X${logicalVolumeExists} == X0 ]] ; then
   echo "Creating logical volume ${logicalVolumePrefix}${applianceName} ..."
-  sudo /usr/sbin/lvcreate -i${logicalVolumeStripes} -L${diskSizeGB}G -n${logicalVolumePrefix}${applianceName} ${logicalVolumeGroupName}
-  sudo /sbin/mkfs -t ext3 /dev/${logicalVolumeGroupName}/${logicalVolumePrefix}${applianceName}
-  sudo mkdir -p ${baseVMMountPoint}/${applianceName}
-  sudo mount /dev/${logicalVolumeGroupName}/${logicalVolumePrefix}${applianceName}  ${baseVMMountPoint}/${applianceName}
+  sudo -E /usr/sbin/lvcreate -i${logicalVolumeStripes} -L${diskSizeGB}G -n${logicalVolumePrefix}${applianceName} ${logicalVolumeGroupName}
+  sudo -E /sbin/mkfs -t ext3 /dev/${logicalVolumeGroupName}/${logicalVolumePrefix}${applianceName}
+  sudo -E mkdir -p ${baseVMMountPoint}/${applianceName}
+  sudo -E mount /dev/${logicalVolumeGroupName}/${logicalVolumePrefix}${applianceName}  ${baseVMMountPoint}/${applianceName}
 
   # Save off VM mount cmd
   touch ${vmMountCmds}
   cp ${vmMountCmds} ${vmMountCmds}.${backupFileExtension}
-  echo "sudo mount /dev/${logicalVolumeGroupName}/${logicalVolumePrefix}${applianceName}  ${baseVMMountPoint}/${applianceName}" >> ${vmMountCmds}.${backupFileExtension}
+  echo "sudo -E mount /dev/${logicalVolumeGroupName}/${logicalVolumePrefix}${applianceName}  ${baseVMMountPoint}/${applianceName}" >> ${vmMountCmds}.${backupFileExtension}
   uniq < ${vmMountCmds}.${backupFileExtension} >${vmMountCmds}
   chmod a+x ${vmMountCmds}
 
@@ -145,7 +145,7 @@ if [[ -e ${applianceWriteDir} ]] ; then
   echo "Appliance Configuration directory ${applianceWriteDir} exists. Skipping creation ..."
 else
   echo "Appliance Configuration directory ${applianceWriteDir} does not exist. Creating ..."
-  sudo mkdir -p ${applianceWriteDir}
+  sudo -E mkdir -p ${applianceWriteDir}
 fi
 
 # Calculate partition size as (100MB + 100MB boot partition) less tham logical volume size to allow for slop in sizing calculations
@@ -271,7 +271,7 @@ fi
 # Add to VM start command
 touch ${vmStartCmds}
 cp ${vmStartCmds} ${vmStartCmds}.${backupFileExtension}
-echo "pushd /xenvms/${applianceName} >/dev/null 2>&1 ; sudo xm create appliance_base.cfg ; popd >/dev/null 2>&1 " >> ${vmStartCmds}.${backupFileExtension}
+echo "pushd /xenvms/${applianceName} >/dev/null 2>&1 ; sudo -E xm create appliance_base.cfg ; popd >/dev/null 2>&1 " >> ${vmStartCmds}.${backupFileExtension}
 uniq < ${vmStartCmds}.${backupFileExtension} >${vmStartCmds} 
 chmod a+x ${vmStartCmds}
 
@@ -298,16 +298,16 @@ fi
 pushd ${baseVMMountPoint}/${applianceName} >/dev/null 2>&1
 
 if [[ X${sourceVMImage} != X ]] ; then
-  sudo rsync -a ${sourceVMImage} .
+  sudo -E rsync -a ${sourceVMImage} .
 else
   # Initialize the VM the first time
   echo "Initializing VM ${applianceName} for the first time"
-  sudo xm create -c appliance_base.install.cfg
+  sudo -E xm create -c appliance_base.install.cfg
 fi
 
 # Start it up the second time with standard options
 echo "Starting VM ${applianceName}"
-sudo xm create appliance_base.cfg
+sudo -E xm create appliance_base.cfg
 
 popd >/dev/null 2>&1
 
