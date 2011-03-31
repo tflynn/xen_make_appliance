@@ -26,6 +26,19 @@ if [[ $# != 5 ]] ; then
   exit 1
 fi
 
+if [[ ! -e $1 ]] ; then
+  echo "Usage: xen_make_appliance [binaries directory] [configuration directory] [appliance name] [memory size in MB] [disk_size in GB]"
+  echo "[binaries directory] specified does not exist"
+  exit 1
+fi
+
+if [[ ! -e $2 ]] ; then
+  echo "Usage: xen_make_appliance [binaries directory] [configuration directory] [appliance name] [memory size in MB] [disk_size in GB]"
+  echo "[configuration directory] specified does not exist"
+  exit 1
+fi
+
+
 ###############
 # Set up a whole bunch of variables
 ###############
