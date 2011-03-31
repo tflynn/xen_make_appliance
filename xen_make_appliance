@@ -38,6 +38,20 @@ if [[ ! -e $2 ]] ; then
   exit 1
 fi
 
+###############
+# Useful methods
+###############
+
+exitOnError () {
+  if [[ X$1 != X0 ]] ; then
+     if [[ X$2 == X ]] ; then
+      echo "An error occured on the last command. Exiting ..."
+    else
+      echo "$2 occured on the last command. Exiting ..."
+    fi
+    exit 1
+  fi
+}
 
 ###############
 # Set up a whole bunch of variables
@@ -95,9 +109,12 @@ logicalVolumeExists=`sudo -E /usr/sbin/lvscan | grep -c ${logicalVolumePrefix}${
 if [[ X${logicalVolumeExists} == X0 ]] ; then
   echo "Creating logical volume ${logicalVolumePrefix}${applianceName} ..."
   sudo -E /usr/sbin/lvcreate -i${logicalVolumeStripes} -L${diskSizeGB}G -n${logicalVolumePrefix}${applianceName} ${logicalVolumeGroupName}
+  exitOnError $? "Error creating logical volume ${logicalVolumeGroupName}"
   sudo -E /sbin/mkfs -t ext3 /dev/${logicalVolumeGroupName}/${logicalVolumePrefix}${applianceName}
+  exitOnError $? "Error creating file system for ${logicalVolumeGroupName}/${logicalVolumePrefix}${applianceName}"
   sudo -E mkdir -p ${baseVMMountPoint}/${applianceName}
   sudo -E mount /dev/${logicalVolumeGroupName}/${logicalVolumePrefix}${applianceName}  ${baseVMMountPoint}/${applianceName}
+  exitOnError $? "Error mounting /dev/${logicalVolumeGroupName}/${logicalVolumePrefix}${applianceName}  ${baseVMMountPoint}/${applianceName}"
 
   # Save off VM mount cmd
   touch ${vmMountCmds}
@@ -114,6 +131,7 @@ fi
 if [[ ! -e ${baseVMMountPoint}/${applianceName}/appliance-base.img ]] ; then
   pushd ${baseVMMountPoint}/${applianceName} >/dev/null 2>&1
   dd if=/dev/zero of=appliance-base.img oflag=direct bs=1M seek=${diskSizeMB} count=1
+  exitOnError $? "Error creating the empty VM disk image"
   popd >/dev/null 2>&1
   echo "Base VM disk image ${baseVMMountPoint}/${applianceName}/appliance-base.img created ..."
 else
@@ -232,7 +250,7 @@ else
   echo "${APPLIANCE_BASE_KICKSTART_CONFIGURATION}" > ${applianceWriteDir}/ks.cfg
 fi
 
-# The non-kickstart files are access on a local file system
+# The non-kickstart files are accessed on a local file system
 
 applianceWriteDir=${baseVMMountPoint}/${applianceName}
 
@@ -291,25 +309,28 @@ chmod a+x ${vmStartCmds}
 
 # Take advantage of standard configurations
 sourceVMImage=''
-if [[ X${diskSizeGB} == X5 ]] ; then
-  if [[ -e /xenvms/baseos/appliance-base.img ]] ; then
-    sourceVMImage="/xenvms/baseos/appliance-base.img"
-  fi
-elif [[ X${diskSizeGB} == X10 ]] ; then
-  if [[ -e /xenvms/baseos10/appliance-base.img ]] ; then
-    sourceVMImage="/xenvms/baseos10/appliance-base.img"
-  fi
-elif [[ X${diskSizeGB} == X20 ]] ; then
-  if [[ -e /xenvms/baseos20/appliance-base.img ]] ; then
-    sourceVMImage="/xenvms/baseos20/appliance-base.img"
-  fi
-elif [[ X${diskSizeGB} == X30 ]] ; then
-  if [[ -e /xenvms/baseos30/appliance-base.img ]] ; then
-    sourceVMImage="/xenvms/baseos30/appliance-base.img"
-  fi
-fi  
+#if [[ X${diskSizeGB} == X5 ]] ; then
+#  if [[ -e /xenvms/baseos/appliance-base.img ]] ; then
+#    sourceVMImage="/xenvms/baseos/appliance-base.img"
+#  fi
+#elif [[ X${diskSizeGB} == X10 ]] ; then
+#  if [[ -e /xenvms/baseos10/appliance-base.img ]] ; then
+#    sourceVMImage="/xenvms/baseos10/appliance-base.img"
+#  fi
+#elif [[ X${diskSizeGB} == X20 ]] ; then
+#  if [[ -e /xenvms/baseos20/appliance-base.img ]] ; then
+#    sourceVMImage="/xenvms/baseos20/appliance-base.img"
+#  fi
+#elif [[ X${diskSizeGB} == X30 ]] ; then
+#  if [[ -e /xenvms/baseos30/appliance-base.img ]] ; then
+#    sourceVMImage="/xenvms/baseos30/appliance-base.img"
+#  fi
+#fi  
 
 pushd ${baseVMMountPoint}/${applianceName} >/dev/null 2>&1
+
+# Give Dropbox time to synchronize
+sleep 5
 
 if [[ X${sourceVMImage} != X ]] ; then
   sudo -E rsync -a ${sourceVMImage} .
