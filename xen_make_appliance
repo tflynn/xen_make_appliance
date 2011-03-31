@@ -207,6 +207,7 @@ which
 telnet
 rsync
 man
+sudo
 %post
 APPLIANCE_BASE_KICKSTART_CONFIGURATION_DOC
 
