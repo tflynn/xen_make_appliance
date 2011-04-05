@@ -332,17 +332,23 @@ pushd ${baseVMMountPoint}/${applianceName} >/dev/null 2>&1
 # Give Dropbox time to synchronize
 sleep 5
 
-if [[ X${sourceVMImage} != X ]] ; then
-  sudo -E rsync -a ${sourceVMImage} .
-else
-  # Initialize the VM the first time
-  echo "Initializing VM ${applianceName} for the first time"
-  sudo -E xm create -c appliance_base.install.cfg
-fi
+xmBin=`which xm`
 
-# Start it up the second time with standard options
-echo "Starting VM ${applianceName}"
-sudo -E xm create appliance_base.cfg
+if [[ X${xmBin} != X ]] ; then
+
+  if [[ X${sourceVMImage} != X ]] ; then
+    sudo -E rsync -a ${sourceVMImage} .
+  else
+    # Initialize the VM the first time
+    echo "Initializing VM ${applianceName} for the first time"
+    sudo -E ${xmBin} create -c appliance_base.install.cfg
+  fi
+
+  # Start it up the second time with standard options
+  echo "Starting VM ${applianceName}"
+  sudo -E ${xmBin} create appliance_base.cfg
+
+fi
 
 popd >/dev/null 2>&1
 
